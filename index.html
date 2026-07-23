@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course Chapter Explorer</title>
+<style>
+  :root{
+    --bg: #0f1115;
+    --panel: #161a21;
+    --panel-2: #1c2029;
+    --border: #262b35;
+    --text: #e7e9ee;
+    --muted: #8b93a3;
+    --accent: #4f8cff;
+    --accent-dim: #2a3d63;
+    --good: #35c98f;
+    --warn: #e0a53e;
+    --radius: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at top left, rgba(79,140,255,0.16), transparent 30%),
+      var(--bg);
+    color:var(--text);
+    min-height:100vh;
+  }
+  header{
+    padding:24px 20px 20px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(135deg, rgba(18,21,28,0.98), rgba(15,17,21,0.96));
+    backdrop-filter:blur(12px);
+  }
+  .app-shell{
+    max-width:1040px;
+    margin:0 auto;
+    display:grid;
+    gap:16px;
+  }
+  .hero{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:12px;
+    padding:8px 0 20px;
+  }
+  .hero-mark{
+    width:72px;
+    height:72px;
+    border-radius:20px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:34px;
+    font-weight:800;
+    letter-spacing:0.02em;
+    color:#fefefe;
+    background:linear-gradient(135deg, rgba(79,140,255,0.95), rgba(130,88,255,0.95));
+    box-shadow:0 0 0 1px rgba(255,255,255,0.08), 0 0 28px rgba(79,140,255,0.5), 0 0 64px rgba(79,140,255,0.28);
+    text-shadow:0 0 16px rgba(255,255,255,0.4);
+  }
+  h1{
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:-0.02em;
+  }
+  .sub{
+    margin:0;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.6;
+    max-width:760px;
+  }
+  .form-card{
+    background:rgba(22,26,33,0.9);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:16px;
+    box-shadow:0 16px 40px rgba(0,0,0,0.22);
+  }
+  .form-toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .form-title-group{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .icon-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    background:linear-gradient(135deg, rgba(79,140,255,0.95), rgba(130,88,255,0.95));
+    color:#fff;
+    font-size:16px;
+    font-weight:700;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.08), 0 0 18px rgba(79,140,255,0.3);
+  }
+  .form-title-text{display:flex; flex-direction:column; gap:2px;}
+  .form-title-text strong{font-size:14px;}
+  .form-title-text span{font-size:11px; color:var(--muted);}
+  .ghost-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 12px;
+  }
+  .ghost-btn:hover:not(:disabled){transform:none; background:rgba(255,255,255,0.04);}
+  .toggle-icon{margin-right:6px;}
+  .url-row{
+    display:grid;
+    grid-template-columns:140px minmax(0, 1fr) auto;
+    gap:12px;
+    align-items:center;
+    margin-top:12px;
+  }
+  .url-row:first-of-type{margin-top:0;}
+  label{
+    font-size:11px;
+    font-weight:700;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .label-icon{font-size:12px; color:#8fb2ff;}
+  .advanced-fields{display:grid; gap:12px; margin-top:10px;}
+  .advanced-fields.collapsed{display:none;}
+  .field-input{display:flex; min-width:0;}
+  input[type="text"]{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:11px 12px;
+    border-radius:var(--radius);
+    font-size:13px;
+    outline:none;
+    min-height:46px;
+    transition:border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  input[type="text"]:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(79,140,255,0.16);
+  }
+  button{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:10px 16px;
+    border-radius:var(--radius);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    transition:transform 0.15s ease, filter 0.15s ease;
+  }
+  button:hover:not(:disabled){transform:translateY(-1px); filter:brightness(1.03);}
+  button.secondary{
+    background:var(--panel-2);
+    color:var(--text);
+    border:1px solid var(--border);
+  }
+  button.small{
+    padding:6px 10px;
+    font-size:12px;
+  }
+  button.load-btn{min-width:140px;}
+  button:disabled{opacity:0.55; cursor:not-allowed;}
+
+  main{
+    max-width:1040px;
+    margin:0 auto;
+    padding:20px;
+    display:grid;
+    gap:12px;
+  }
+  .status{
+    color:var(--muted);
+    font-size:13px;
+    padding:8px 0 0;
+  }
+  .status.error{color:#e05a5a;}
+
+  .chapter{
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--panel);
+    margin-bottom:10px;
+    overflow:hidden;
+    box-shadow:0 8px 24px rgba(0,0,0,0.16);
+  }
+  .chapter-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .chapter-head:hover{background:var(--panel-2);}
+  .chapter-title{
+    font-size:14px;
+    font-weight:600;
+  }
+  .chapter-meta{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .chapter-toggle{
+    color:var(--muted);
+    font-size:12px;
+    transition:transform 0.15s;
+  }
+  .chapter-body{
+    display:none;
+    padding:0 16px 16px;
+    border-top:1px solid var(--border);
+  }
+  .chapter.open .chapter-body{display:block;}
+  .chapter.open .chapter-toggle{transform:rotate(90deg);}
+
+  .sub-list{
+    padding-left:14px;
+    border-left:1px dashed var(--border);
+    margin-top:10px;
+  }
+
+  .asset{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .asset:last-child{border-bottom:none;}
+  .asset-info{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .asset-title{
+    font-size:13px;
+    font-weight:500;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:min(100%, 560px);
+  }
+  .asset-meta{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .asset-actions{
+    display:flex;
+    gap:6px;
+    flex-shrink:0;
+  }
+  .badge{
+    display:inline-block;
+    font-size:10px;
+    padding:1px 6px;
+    border-radius:100px;
+    margin-left:6px;
+  }
+  .badge.public{background:rgba(53,201,143,0.15); color:var(--good);}
+  .badge.private{background:rgba(224,165,62,0.15); color:var(--warn);}
+
+  .empty{
+    font-size:12px;
+    color:var(--muted);
+    padding:8px 0;
+    font-style:italic;
+  }
+
+  .modal-backdrop{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.7);
+    z-index:50;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal{
+    background:#000;
+    border-radius:var(--radius);
+    overflow:hidden;
+    max-width:900px;
+    width:100%;
+    position:relative;
+  }
+  .modal video{
+    width:100%;
+    display:block;
+    max-height:80vh;
+  }
+  .modal-close{
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:rgba(0,0,0,0.6);
+    color:#fff;
+    border:none;
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+    z-index:5;
+  }
+
+  @media (max-width: 768px){
+    header{padding:20px 14px 18px;}
+    .form-card{padding:14px;}
+    .url-row{grid-template-columns:1fr; gap:8px;}
+    label{font-size:10px;}
+    button.load-btn{width:100%; min-width:0;}
+    main{padding:14px;}
+    .chapter-head{align-items:flex-start;}
+    .asset{flex-direction:column; align-items:flex-start;}
+    .asset-actions{width:100%;}
+    .asset-actions button{flex:1;}
+  }
+
+  @media (max-width: 480px){
+    h1{font-size:20px;}
+    .sub{font-size:12px;}
+    .asset-title{font-size:12px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="app-shell">
+    <div class="hero">
+      <div class="hero-mark" aria-label="Book logo">📖</div>
+      <h1>Course Chapter Explorer</h1>
+      <div class="sub">Paste a course URL, then browse chapters, preview videos, and download files.</div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-toolbar">
+        <div class="form-title-group">
+          <div class="icon-badge">📖</div>
+          <div class="form-title-text">
+            <strong>Fetch Course</strong>
+            <span>Course URL and connection details</span>
+          </div>
+        </div>
+        <button id="toggleAdvancedBtn" class="ghost-btn" type="button" aria-expanded="false">
+          <span class="toggle-icon">⚙️</span>More settings
+        </button>
+      </div>
+
+      <div class="url-row">
+        <label for="courseUrl"><span class="label-icon">🔗</span>Course URL</label>
+        <div class="field-input">
+          <input type="text" id="courseUrl" placeholder="https://admin.biggyaan.com/learner/explore/course/&lt;course-id&gt;">
+        </div>
+        <button id="loadBtn" class="load-btn">⬇ Fetch Course</button>
+      </div>
+
+      <div id="advancedFields" class="advanced-fields collapsed">
+        <div class="url-row">
+          <label for="apiBase"><span class="label-icon">🌐</span>API Base</label>
+          <div class="field-input">
+            <input type="text" id="apiBase" placeholder="API base URL">
+          </div>
+        </div>
+        <div class="url-row">
+          <label for="sessionId"><span class="label-icon">🪪</span>Session ID</label>
+          <div class="field-input">
+            <input type="text" id="sessionId" placeholder="Session ID (sent as x-session-id header)">
+          </div>
+        </div>
+        <div class="url-row">
+          <label for="bearerToken"><span class="label-icon">🔐</span>Bearer Token</label>
+          <div class="field-input">
+            <input type="text" id="bearerToken" placeholder="Bearer token (sent as Authorization header)">
+          </div>
+        </div>
+      </div>
+      <div id="status" class="status"></div>
+    </div>
+  </div>
+</header>
+
+<main id="content"></main>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">&times;</button>
+    <video id="modalVideo" controls autoplay></video>
+  </div>
+</div>
+
+<script>
+const apiBaseInput = document.getElementById("apiBase");
+const courseUrlInput = document.getElementById("courseUrl");
+const sessionIdInput = document.getElementById("sessionId");
+const bearerTokenInput = document.getElementById("bearerToken");
+const loadBtn = document.getElementById("loadBtn");
+const toggleAdvancedBtn = document.getElementById("toggleAdvancedBtn");
+const advancedFields = document.getElementById("advancedFields");
+const statusEl = document.getElementById("status");
+const contentEl = document.getElementById("content");
+const modalBackdrop = document.getElementById("modalBackdrop");
+const modalVideo = document.getElementById("modalVideo");
+const modalClose = document.getElementById("modalClose");
+
+function apiBase(){
+  return apiBaseInput.value.trim().replace(/\/+$/, "");
+}
+function apiOrigin(){
+  try { return new URL(apiBase()).origin; } catch { return ""; }
+}
+
+function readStoredValue(key, fallback){
+  const saved = localStorage.getItem(key);
+  return saved === null ? fallback : saved;
+}
+
+function saveInputValue(key, value){
+  localStorage.setItem(key, value);
+}
+
+const defaultCourseUrl = "https://admin.biggyaan.com/learner/explore/course/17e128df-2de3-4310-b462-7053f13140b0";
+const defaultApiBase = "https://api.biggyaan.com/api/v1";
+const defaultBearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDFmOWJmNi1jNDIwLTQyYzEtYmY5Ny0xY2UzMWI1NTg4NjkiLCJlbWFpbCI6ImxlYmVoODk1NzJAYmVzdGV5YS5jb20iLCJkZXZpY2VJZCI6IjE3ODQ3MzkyODE0NzQtYjk1MTg1ZjktMDFiZS00OGIyLWEwODUtODE1NGJkZTY4N2MyIiwic2Vzc2lvbklkIjoiMDczYjI0MTktMTA0ZS00OTYxLTkxYmMtYWE1MjViN2JlNWNmIiwicm9sZSI6IkxFQVJORVIiLCJpYXQiOjE3ODQ3MzkyODEsImV4cCI6MTc4NDgyNTY4MX0.-ZsfEEcZFhkg_BfssDXv9Hs154yAPyI_qMRC1KMEzvk";
+
+// restore all form values from localStorage on refresh
+courseUrlInput.value = readStoredValue("biggyaan_course_url", defaultCourseUrl);
+apiBaseInput.value = readStoredValue("biggyaan_api_base", defaultApiBase);
+sessionIdInput.value = readStoredValue("biggyaan_session_id", "");
+bearerTokenInput.value = readStoredValue("biggyaan_bearer_token", defaultBearerToken);
+
+let isAdvancedCollapsed = readStoredValue("biggyaan_form_collapsed", "true") === "true";
+
+function applyAdvancedState(){
+  advancedFields.classList.toggle("collapsed", isAdvancedCollapsed);
+  toggleAdvancedBtn.setAttribute("aria-expanded", String(!isAdvancedCollapsed));
+  toggleAdvancedBtn.innerHTML = `<span class="toggle-icon">${isAdvancedCollapsed ? "⚙️" : "▲"}</span>${isAdvancedCollapsed ? "More settings" : "Hide settings"}`;
+}
+
+applyAdvancedState();
+
+courseUrlInput.addEventListener("input", () => {
+  saveInputValue("biggyaan_course_url", courseUrlInput.value.trim());
+});
+apiBaseInput.addEventListener("input", () => {
+  saveInputValue("biggyaan_api_base", apiBaseInput.value.trim());
+});
+sessionIdInput.addEventListener("input", () => {
+  saveInputValue("biggyaan_session_id", sessionIdInput.value.trim());
+});
+bearerTokenInput.addEventListener("input", () => {
+  saveInputValue("biggyaan_bearer_token", bearerTokenInput.value.trim());
+});
+
+toggleAdvancedBtn.addEventListener("click", () => {
+  isAdvancedCollapsed = !isAdvancedCollapsed;
+  localStorage.setItem("biggyaan_form_collapsed", String(isAdvancedCollapsed));
+  applyAdvancedState();
+});
+
+function authHeaders(){
+  const sid = sessionIdInput.value.trim();
+  const token = bearerTokenInput.value.trim();
+  const headers = {};
+  if (sid) headers["x-session-id"] = sid;
+  if (token) headers["Authorization"] = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+  return headers;
+}
+
+function extractCourseId(url){
+  // pulls a UUID out of the pasted URL, wherever it sits
+  const match = url.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return match ? match[0] : null;
+}
+
+function previewUrl(fileId){
+  if(fileId.fileId) fileId = fileId.fileId; // allow passing the whole asset object
+  return `${apiBase()}/storage/files/${fileId}/preview`;
+}
+
+function downloadUrl(asset){
+  const rel = asset.file && asset.file.downloadUrl;
+  if (rel) {
+    return rel.startsWith("http") ? rel : `${apiOrigin()}${rel}`;
+  }
+  return `${apiBase()}/storage/files/${asset.fileId}/download`;
+}
+
+function formatSize(bytes){
+  const n = Number(bytes);
+  if (!n) return "";
+  const units = ["B","KB","MB","GB"];
+  let i = 0, v = n;
+  while (v >= 1024 && i < units.length - 1){ v /= 1024; i++; }
+  return `${v.toFixed(1)} ${units[i]}`;
+}
+
+let currentObjectUrl = null;
+
+async function openVideo(fileId, triggerBtn){
+  const originalText = triggerBtn ? triggerBtn.textContent : null;
+  if (triggerBtn){ triggerBtn.disabled = true; triggerBtn.textContent = "Loading..."; }
+  try {
+    const res = await fetch(previewUrl(fileId), { headers: authHeaders() });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const json = await res.json();
+    if (!json.url) throw new Error("no url in response");
+    // this is a presigned S3 url good for ~1hr — stream directly, no need to proxy it
+    modalVideo.src = json.url;
+    modalBackdrop.classList.add("open");
+  } catch (err) {
+    alert(`Couldn't load video: ${err.message}`);
+  } finally {
+    if (triggerBtn){ triggerBtn.disabled = false; triggerBtn.textContent = originalText; }
+  }
+}
+
+async function downloadAsset(asset, triggerBtn){
+  const originalText = triggerBtn.textContent;
+  triggerBtn.disabled = true;
+  triggerBtn.textContent = "Downloading...";
+  try {
+    // /download 302-redirects to the same kind of presigned S3 url; fetch follows
+    // it automatically and hands back the final video bytes.
+    const res = await fetch(downloadUrl(asset), { headers: authHeaders() });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = (asset.file && asset.file.name) || asset.title || "video.mp4";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objUrl);
+  } catch (err) {
+    alert(`Couldn't download file: ${err.message}. If this is a CORS error from the storage host, try the Play button and use your browser/player's own save option instead.`);
+  } finally {
+    triggerBtn.disabled = false;
+    triggerBtn.textContent = originalText;
+  }
+}
+
+
+async function viewAsset(asset, triggerBtn){
+  const originalText = triggerBtn.textContent;
+  triggerBtn.disabled = true;
+  triggerBtn.textContent = "Viewing...";
+  try {
+    // /download 302-redirects to the same kind of presigned S3 url; fetch follows
+    // it automatically and hands back the final video bytes.
+    const res = await fetch(previewUrl(asset), { headers: authHeaders() });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const json = await res.json();
+    if (!json.url) throw new Error("no url in response");
+    const objUrl = json.url;
+    window.open(objUrl, "_blank");
+  } catch (err) {
+    alert(`Couldn't download file: ${err.message}. If this is a CORS error from the storage host, try the Play button and use your browser/player's own save option instead.`);
+  } finally {
+    triggerBtn.disabled = false;
+    triggerBtn.textContent = originalText;
+  }
+}
+
+function closeVideo(){
+  modalBackdrop.classList.remove("open");
+  modalVideo.pause();
+  modalVideo.src = "";
+  if (currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+}
+
+modalClose.addEventListener("click", closeVideo);
+modalBackdrop.addEventListener("click", (e) => { if (e.target === modalBackdrop) closeVideo(); });
+
+function renderAsset(asset){
+  const wrap = document.createElement("div");
+  wrap.className = "asset";
+
+  const isPublic = asset.file && asset.file.metadata && asset.file.metadata.isPublic;
+  const size = asset.file ? formatSize(asset.file.size) : "";
+
+  wrap.innerHTML = `
+    <div class="asset-info">
+      <div class="asset-title" title="${asset.title || ""}">${asset.title || "Untitled"}
+        <span class="badge ${isPublic ? "public" : "private"}">${isPublic ? "public" : "private"}</span>
+      </div>
+      <div class="asset-meta">${asset.assetType || ""}${size ? " · " + size : ""}${asset.status ? " · " + asset.status : ""}</div>
+    </div>
+    <div class="asset-actions"></div>
+  `;
+
+  const actions = wrap.querySelector(".asset-actions");
+
+  if ((asset.assetType === "VIDEO" || asset.assetType === "LIVE_CLASS") && asset.fileId){
+    const playBtn = document.createElement("button");
+    playBtn.className = "small";
+    playBtn.textContent = "Play";
+    playBtn.addEventListener("click", () => openVideo(asset.fileId, playBtn));
+    actions.appendChild(playBtn);
+
+    const dlBtn = document.createElement("button");
+    dlBtn.className = "small secondary";
+    dlBtn.textContent = "Download";
+    dlBtn.addEventListener("click", () => downloadAsset(asset, dlBtn));
+    actions.appendChild(dlBtn);
+  }
+  else if(asset.assetType === "PDF" && asset.fileId){
+    
+    const playBtn = document.createElement("button");
+    playBtn.className = "small";
+    playBtn.textContent = "View";
+    playBtn.addEventListener("click", () => viewAsset(asset.fileId, playBtn));
+    actions.appendChild(playBtn);
+
+    const dlBtn = document.createElement("button");
+    dlBtn.className = "small";
+    dlBtn.textContent = "Download";
+    dlBtn.addEventListener("click", () => downloadAsset(asset, dlBtn));
+    actions.appendChild(dlBtn);
+  }
+  
+
+  return wrap;
+}
+
+function renderChapter(chapter, depth){
+  const el = document.createElement("div");
+  el.className = "chapter";
+  if (depth > 0) el.style.marginTop = "8px";
+
+  const head = document.createElement("div");
+  head.className = "chapter-head";
+
+  const assetCount = (chapter.assets || []).length;
+  const subCount = (chapter.subChapters || []).length;
+
+  head.innerHTML = `
+    <div>
+      <div class="chapter-title">${chapter.title || "Untitled chapter"}</div>
+      <div class="chapter-meta">${assetCount} video${assetCount === 1 ? "" : "s"}${subCount ? " · " + subCount + " sub-chapter" + (subCount === 1 ? "" : "s") : ""}</div>
+    </div>
+    <div class="chapter-toggle">&#9656;</div>
+  `;
+
+  const body = document.createElement("div");
+  body.className = "chapter-body";
+
+  if (assetCount === 0 && subCount === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No content in this chapter yet.";
+    body.appendChild(empty);
+  }
+
+  (chapter.assets || []).forEach(asset => body.appendChild(renderAsset(asset)));
+
+  if (subCount > 0){
+    const subList = document.createElement("div");
+    subList.className = "sub-list";
+    chapter.subChapters.forEach(sub => subList.appendChild(renderChapter(sub, depth + 1)));
+    body.appendChild(subList);
+  }
+
+  head.addEventListener("click", () => el.classList.toggle("open"));
+
+  el.appendChild(head);
+  el.appendChild(body);
+  return el;
+}
+
+async function loadChapters(){
+  const url = courseUrlInput.value.trim();
+  const courseId = extractCourseId(url);
+
+  contentEl.innerHTML = "";
+
+  if (!courseId){
+    statusEl.textContent = "Couldn't find a course ID in that URL.";
+    statusEl.className = "status error";
+    return;
+  }
+
+  statusEl.textContent = "Fetching course...";
+  statusEl.className = "status";
+  loadBtn.disabled = true;
+
+  try {
+    const res = await fetch(`${apiBase()}/courses/${courseId}/chapters`, { headers: authHeaders() });
+    if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
+    const json = await res.json();
+    const chapters = json?.data?.chapters || [];
+
+    if (chapters.length === 0){
+      statusEl.textContent = "No chapters found for this course.";
+      loadBtn.disabled = false;
+      return;
+    }
+
+    statusEl.textContent = `Loaded ${chapters.length} chapter${chapters.length === 1 ? "" : "s"}.`;
+    chapters.forEach(ch => contentEl.appendChild(renderChapter(ch, 0)));
+
+  } catch (err) {
+    statusEl.textContent = `Couldn't load chapters: ${err.message}. This is often a CORS restriction on ${apiOrigin() || "the API host"} blocking browser requests from this page.`;
+    statusEl.className = "status error";
+  } finally {
+    loadBtn.disabled = false;
+  }
+}
+
+loadBtn.addEventListener("click", loadChapters);
+courseUrlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadChapters(); });
+
+// auto-load on first open
+loadChapters();
+</script>
+</body>
+</html>
