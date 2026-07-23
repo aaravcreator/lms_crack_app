@@ -636,6 +636,45 @@ async function viewAsset(asset, triggerBtn){
   }
 }
 
+async function copyAssetPreviewUrl(asset, triggerBtn){
+  const originalText = triggerBtn.textContent;
+  triggerBtn.disabled = true;
+  triggerBtn.textContent = "Copying...";
+  try {
+    const res = await fetch(previewUrl(asset), { headers: authHeaders() });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const json = await res.json();
+    if (!json.url) throw new Error("no url in response");
+
+    const url = json.url;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const tempInput = document.createElement("textarea");
+      tempInput.value = url;
+      tempInput.setAttribute("readonly", "");
+      tempInput.style.position = "fixed";
+      tempInput.style.left = "-9999px";
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand("copy");
+      tempInput.remove();
+    }
+
+    triggerBtn.textContent = "Copied!";
+    statusEl.textContent = "Preview URL copied to clipboard.";
+    statusEl.className = "status";
+    setTimeout(() => {
+      triggerBtn.disabled = false;
+      triggerBtn.textContent = originalText;
+    }, 1200);
+  } catch (err) {
+    alert(`Couldn't copy preview URL: ${err.message}`);
+    triggerBtn.disabled = false;
+    triggerBtn.textContent = originalText;
+  }
+}
+
 function closeVideo(){
   modalBackdrop.classList.remove("open");
   destroyVideoPlayer();
@@ -674,6 +713,12 @@ function renderAsset(asset){
     playBtn.addEventListener("click", () => openVideo(asset.fileId, playBtn));
     actions.appendChild(playBtn);
 
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "small secondary";
+    copyBtn.textContent = "Copy";
+    copyBtn.addEventListener("click", () => copyAssetPreviewUrl(asset, copyBtn));
+    actions.appendChild(copyBtn);
+
     const dlBtn = document.createElement("button");
     dlBtn.className = "small secondary";
     dlBtn.textContent = "Download";
@@ -687,6 +732,12 @@ function renderAsset(asset){
     playBtn.textContent = "View";
     playBtn.addEventListener("click", () => viewAsset(asset.fileId, playBtn));
     actions.appendChild(playBtn);
+
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "small secondary";
+    copyBtn.textContent = "Copy";
+    copyBtn.addEventListener("click", () => copyAssetPreviewUrl(asset, copyBtn));
+    actions.appendChild(copyBtn);
 
     const dlBtn = document.createElement("button");
     dlBtn.className = "small";
