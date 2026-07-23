@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Course Chapter Explorer</title>
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 <style>
   :root{
     --bg: #0f1115;
@@ -308,6 +309,10 @@
     width:100%;
     position:relative;
   }
+  .modal .plyr{
+    width:100%;
+    border-radius:var(--radius);
+  }
   .modal video{
     width:100%;
     display:block;
@@ -411,10 +416,11 @@
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
     <button class="modal-close" id="modalClose">&times;</button>
-    <video id="modalVideo" controls autoplay></video>
+    <video id="modalVideo" controls playsinline autoplay></video>
   </div>
 </div>
 
+<script src="https://cdn.plyr.io/3.7.8/plyr.min.js"></script>
 <script>
 const apiBaseInput = document.getElementById("apiBase");
 const courseUrlInput = document.getElementById("courseUrl");
@@ -428,6 +434,7 @@ const contentEl = document.getElementById("content");
 const modalBackdrop = document.getElementById("modalBackdrop");
 const modalVideo = document.getElementById("modalVideo");
 const modalClose = document.getElementById("modalClose");
+let plyrPlayer = null;
 
 function apiBase(){
   return apiBaseInput.value.trim().replace(/\/+$/, "");
@@ -449,11 +456,27 @@ const defaultCourseUrl = "https://admin.biggyaan.com/learner/explore/course/17e1
 const defaultApiBase = "https://api.biggyaan.com/api/v1";
 const defaultBearerToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDFmOWJmNi1jNDIwLTQyYzEtYmY5Ny0xY2UzMWI1NTg4NjkiLCJlbWFpbCI6ImxlYmVoODk1NzJAYmVzdGV5YS5jb20iLCJkZXZpY2VJZCI6IjE3ODQ3MzkyODE0NzQtYjk1MTg1ZjktMDFiZS00OGIyLWEwODUtODE1NGJkZTY4N2MyIiwic2Vzc2lvbklkIjoiMDczYjI0MTktMTA0ZS00OTYxLTkxYmMtYWE1MjViN2JlNWNmIiwicm9sZSI6IkxFQVJORVIiLCJpYXQiOjE3ODQ3MzkyODEsImV4cCI6MTc4NDgyNTY4MX0.-ZsfEEcZFhkg_BfssDXv9Hs154yAPyI_qMRC1KMEzvk";
 
-// restore all form values from localStorage on refresh
-courseUrlInput.value = readStoredValue("biggyaan_course_url", defaultCourseUrl);
-apiBaseInput.value = readStoredValue("biggyaan_api_base", defaultApiBase);
-sessionIdInput.value = readStoredValue("biggyaan_session_id", "");
-bearerTokenInput.value = readStoredValue("biggyaan_bearer_token", defaultBearerToken);
+const queryParams = new URLSearchParams(window.location.search);
+function getQueryParam(name){
+  const value = queryParams.get(name);
+  return value ? value.trim() : "";
+}
+
+const queryCourseUrl = getQueryParam("url") || getQueryParam("courseUrl");
+const queryApiBase = getQueryParam("apiBase");
+const querySessionId = getQueryParam("sessionId");
+const queryAccessToken = getQueryParam("accessToken") || getQueryParam("bearerToken") || getQueryParam("token");
+
+// restore all form values from localStorage on refresh, but prefer URL params when provided
+courseUrlInput.value = queryCourseUrl || readStoredValue("biggyaan_course_url", defaultCourseUrl);
+apiBaseInput.value = queryApiBase || readStoredValue("biggyaan_api_base", defaultApiBase);
+sessionIdInput.value = querySessionId || readStoredValue("biggyaan_session_id", "");
+bearerTokenInput.value = queryAccessToken || readStoredValue("biggyaan_bearer_token", defaultBearerToken);
+
+saveInputValue("biggyaan_course_url", courseUrlInput.value);
+saveInputValue("biggyaan_api_base", apiBaseInput.value);
+saveInputValue("biggyaan_session_id", sessionIdInput.value);
+saveInputValue("biggyaan_bearer_token", bearerTokenInput.value);
 
 let isAdvancedCollapsed = readStoredValue("biggyaan_form_collapsed", "true") === "true";
 
@@ -523,6 +546,25 @@ function formatSize(bytes){
 
 let currentObjectUrl = null;
 
+function destroyVideoPlayer(){
+  if (plyrPlayer) {
+    plyrPlayer.destroy();
+    plyrPlayer = null;
+  }
+}
+
+function initVideoPlayer(){
+  destroyVideoPlayer();
+  if (window.Plyr) {
+    plyrPlayer = new Plyr(modalVideo, {
+      controls: ["play-large", "play", "progress", "current-time", "mute", "volume", "fullscreen"],
+      ratio: "16:9",
+      keyboard: { focused: true, global: false },
+      seekTime: 10
+    });
+  }
+}
+
 async function openVideo(fileId, triggerBtn){
   const originalText = triggerBtn ? triggerBtn.textContent : null;
   if (triggerBtn){ triggerBtn.disabled = true; triggerBtn.textContent = "Loading..."; }
@@ -533,7 +575,12 @@ async function openVideo(fileId, triggerBtn){
     if (!json.url) throw new Error("no url in response");
     // this is a presigned S3 url good for ~1hr — stream directly, no need to proxy it
     modalVideo.src = json.url;
+    modalVideo.load();
+    initVideoPlayer();
     modalBackdrop.classList.add("open");
+    if (plyrPlayer) {
+      plyrPlayer.play().catch(() => {});
+    }
   } catch (err) {
     alert(`Couldn't load video: ${err.message}`);
   } finally {
@@ -591,8 +638,10 @@ async function viewAsset(asset, triggerBtn){
 
 function closeVideo(){
   modalBackdrop.classList.remove("open");
-  modalVideo.pause();
-  modalVideo.src = "";
+  destroyVideoPlayer();
+  if (!modalVideo.paused) modalVideo.pause();
+  modalVideo.removeAttribute("src");
+  modalVideo.load();
   if (currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
 }
 
@@ -737,8 +786,12 @@ async function loadChapters(){
 loadBtn.addEventListener("click", loadChapters);
 courseUrlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") loadChapters(); });
 
-// auto-load on first open
-loadChapters();
+// auto-load on first open, using URL params when available
+if (queryCourseUrl || queryApiBase || querySessionId || queryAccessToken) {
+  setTimeout(loadChapters, 150);
+} else {
+  loadChapters();
+}
 </script>
 </body>
 </html>
